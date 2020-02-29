@@ -10,7 +10,7 @@ cdoc: $(OBJS)
 	$(CC) -o $@ $(OBJS) $(CFLAGS)
 
 format:
-	clang-format -i *.c
+	clang-format -i cdoc.c
 
 clean:
 	rm -f cdoc $(OBJS)
