@@ -99,6 +99,19 @@ version(void)
     exit(EXIT_SUCCESS);
 }
 
+static void*
+xalloc(void* ptr, size_t size)
+{
+    if (size == 0) return free(ptr), NULL;
+    void* const mem = realloc(ptr, size);
+    if (mem == NULL)
+    {
+        fputs("error: Out of memory\n", stderr);
+        exit(EXIT_FAILURE);
+    }
+    return mem;
+}
+
 // Returns the contents of stream as a NUL-terminated heap-allocated cstring.
 static char*
 read_text_file(FILE* stream)
@@ -114,8 +127,7 @@ read_text_file(FILE* stream)
             fputs("error: Encountered illegal NUL byte!\n", stderr);
             exit(EXIT_FAILURE);
         }
-        buf = realloc(buf, len + 1);
-        assert(buf != NULL);
+        buf = xalloc(buf, len + 1);
         buf[len++] = (char)c;
     }
     if (!feof(stream))
@@ -124,8 +136,7 @@ read_text_file(FILE* stream)
         exit(EXIT_FAILURE);
     }
 
-    buf = realloc(buf, len + 1);
-    assert(buf != NULL);
+    buf = xalloc(buf, len + 1);
     buf[len++] = '\0';
     return buf;
 }
@@ -136,8 +147,7 @@ read_text_file(FILE* stream)
 static char**
 text_to_lines(char* text)
 {
-    char** lines = realloc(NULL, (strlen(text) + 1) * sizeof(char*));
-    assert(lines != NULL);
+    char** lines = xalloc(NULL, (strlen(text) + 1) * sizeof(char*));
     size_t count = 0;
     lines[count++] = text;
 
@@ -198,8 +208,7 @@ do_file(void)
             linep += 1;
             continue;
         }
-        docs = realloc(docs, (doc_count + 1) * sizeof(*docs));
-        assert(docs != NULL);
+        docs = xalloc(docs, (doc_count + 1) * sizeof(*docs));
         docs[doc_count++] = parse_doc();
     }
 
