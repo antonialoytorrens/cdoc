@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,17 +100,28 @@ version(void)
     exit(EXIT_SUCCESS);
 }
 
+static void
+errorf(char const* fmt, ...)
+{
+    assert(fmt != NULL);
+
+    va_list args;
+    va_start(args, fmt);
+    fputs("error: ", stderr);
+    vfprintf(stderr, fmt, args);
+    fputs("\n", stderr);
+    va_end(args);
+
+    // Any error should immediately terminate the program.
+    exit(EXIT_FAILURE);
+}
+
 static void*
 xalloc(void* ptr, size_t size)
 {
     if (size == 0) return free(ptr), NULL;
-    void* const mem = realloc(ptr, size);
-    if (mem == NULL)
-    {
-        fputs("error: Out of memory\n", stderr);
-        exit(EXIT_FAILURE);
-    }
-    return mem;
+    if ((ptr = realloc(ptr, size)) == NULL) errorf("Out of memory");
+    return ptr;
 }
 
 // Returns the contents of stream as a NUL-terminated heap-allocated cstring.
@@ -122,19 +134,11 @@ read_text_file(FILE* stream)
     int c;
     while ((c = fgetc(stream)) != EOF)
     {
-        if (c == '\0')
-        {
-            fputs("error: Encountered illegal NUL byte!\n", stderr);
-            exit(EXIT_FAILURE);
-        }
+        if (c == '\0') errorf("Ecountered illegal NUL byte");
         buf = xalloc(buf, len + 1);
         buf[len++] = (char)c;
     }
-    if (!feof(stream))
-    {
-        fputs("error: Failed to read entire text file!\n", stderr);
-        exit(EXIT_FAILURE);
-    }
+    if (!feof(stream)) errorf("Failed to read entire text file");
 
     buf = xalloc(buf, len + 1);
     buf[len++] = '\0';
@@ -252,18 +256,9 @@ parse_section(void)
     struct section s = {0};
     char const* cp = doc_content_start(*linep);
     if (*cp++ != '@')
-    {
-        fprintf(
-            stderr,
-            "error(line %d): Doc-section must begin with @<TAG>\n",
-            LINENO);
-        exit(EXIT_FAILURE);
-    }
-    if (is_hspace(*cp))
-    {
-        fprintf(stderr, "error(line %d): Empty doc-comment tag\n", LINENO);
-        exit(EXIT_FAILURE);
-    }
+        errorf("[line %d] Doc-section must begin with @<TAG>", LINENO);
+    if (is_hspace(*cp) || *cp == '\0')
+        errorf("[line %d] Empty doc-comment tag", LINENO);
 
     // TAG
     s.tag_start = cp;
@@ -279,13 +274,7 @@ parse_section(void)
 
     while (is_hspace(*cp)) cp += 1;
     if (*cp != '\0')
-    {
-        fprintf(
-            stderr,
-            "error(line %d): Extra character(s) after tag line <NAME>\n",
-            LINENO);
-        exit(EXIT_FAILURE);
-    }
+        errorf("[line %d] Extra character(s) after tag line <NAME>", LINENO);
 
     // TEXT
     linep += 1;
