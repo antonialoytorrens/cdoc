@@ -134,7 +134,7 @@ read_text_file(FILE* stream)
     int c;
     while ((c = fgetc(stream)) != EOF)
     {
-        if (c == '\0') errorf("Ecountered illegal NUL byte");
+        if (c == '\0') errorf("Encountered illegal NUL byte");
         buf = xalloc(buf, len + 1);
         buf[len++] = (char)c;
     }
