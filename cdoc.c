@@ -235,9 +235,7 @@ parse_doc(void)
     struct doc d = {0};
     while (is_doc_line(*linep))
     {
-        d.sections =
-            realloc(d.sections, (d.section_count + 1) * sizeof(*d.sections));
-        assert(d.sections != NULL);
+        d.sections = xalloc(d.sections, (d.section_count + 1) * sizeof(*d.sections));
         d.sections[d.section_count++] = parse_section();
     }
     return d;
