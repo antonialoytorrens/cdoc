@@ -25,6 +25,9 @@ struct doc
 {
     struct section* sections; // dynamically allocated
     size_t section_count;
+
+    // NULL-terminated list of associated source code.
+    char** source; // dynamically allocated
 };
 static struct doc
 parse_doc(void);
@@ -223,10 +226,96 @@ do_file(void)
     }
 
     // CLEANUP
-    for (size_t i = 0; i < doc_count; ++i) free(docs[i].sections);
+    for (size_t i = 0; i < doc_count; ++i)
+    {
+        free(docs[i].sections);
+        free(docs[i].source);
+    }
     free(docs);
     free(text);
     free(lines);
+}
+
+static char**
+parse_struct_source(void)
+{
+    char** lines = NULL;
+    size_t count = 0;
+
+    bool parsed = false; // Are we finished parsing the source?
+    int brackets = 0; // Number of '{' minus number of '}'.
+    for (; !parsed; linep += 1)
+    {
+        if (linep == NULL) errorf("Unexpected end-of-file");
+        lines = xalloc(lines, (count + 1) * sizeof(char*));
+        lines[count++] = *linep;
+
+        for (char* cp = *linep; *cp != '\0'; ++cp)
+        {
+            brackets += *cp == '{';
+            brackets -= *cp == '}';
+            if (brackets == 0 && *cp == ';') parsed = true;
+        }
+    }
+
+    lines = xalloc(lines, (count + 1) * sizeof(char*));
+    lines[count] = NULL;
+    return lines;
+}
+
+static char**
+parse_function_source(void)
+{
+    char** lines = NULL;
+    size_t count = 0;
+
+    bool parsed = false;
+    for (; !parsed; linep += 1)
+    {
+        if (linep == NULL) errorf("Unexpected end-of-file");
+        lines = xalloc(lines, (count + 1) * sizeof(char*));
+        lines[count++] = *linep;
+
+        for (char* cp = *linep; *cp != '\0'; ++cp)
+        {
+            if (*cp == ';')
+            {
+                parsed = true;
+                break;
+            }
+            else if (*cp == '{')
+            {
+                parsed = true;
+                lines = xalloc(lines, (count + 1) * sizeof(char*));
+                lines[count++] = "/* function definition... */";
+            }
+            if (*cp == '{' || *cp == ';') parsed = true;
+        }
+    }
+
+    lines = xalloc(lines, (count + 1) * sizeof(char*));
+    lines[count] = NULL;
+    return lines;
+}
+
+static char**
+parse_macro_source(void)
+{
+    char** lines = NULL;
+    size_t count = 0;
+
+    bool parsed = false;
+    for (; !parsed; linep += 1)
+    {
+        if (linep == NULL) errorf("Unexpected end-of-file");
+        lines = xalloc(lines, (count + 1) * sizeof(char*));
+        lines[count++] = *linep;
+        parsed = (*linep)[strlen(*linep) - 1] != '\\';
+    }
+
+    lines = xalloc(lines, (count + 1) * sizeof(char*));
+    lines[count] = NULL;
+    return lines;
 }
 
 static struct doc
@@ -235,9 +324,23 @@ parse_doc(void)
     struct doc d = {0};
     while (is_doc_line(*linep))
     {
-        d.sections = xalloc(d.sections, (d.section_count + 1) * sizeof(*d.sections));
+        d.sections =
+            xalloc(d.sections, (d.section_count + 1) * sizeof(*d.sections));
         d.sections[d.section_count++] = parse_section();
     }
+
+    char const* const start = d.sections[0].tag_start;
+    size_t const len = (size_t)d.sections[0].tag_len;
+#define DOC_IS(tag) (len == strlen(tag) && strncmp(start, tag, len) == 0)
+    if (DOC_IS("struct") || DOC_IS("union") || DOC_IS("enum")
+        || DOC_IS("typedef") || DOC_IS("variable"))
+        d.source = parse_struct_source();
+    else if (DOC_IS("function"))
+        d.source = parse_function_source();
+    else if (DOC_IS("macro"))
+        d.source = parse_macro_source();
+#undef DOC_IS
+
     return d;
 }
 
@@ -245,6 +348,13 @@ static void
 print_doc(struct doc const d)
 {
     for (size_t i = 0; i < d.section_count; ++i) print_section(d.sections[i]);
+    if (d.source != NULL)
+    {
+        puts("<pre><code>");
+        char** ln = d.source;
+        while (*ln != NULL) puts(*ln++);
+        puts("</code></pre>");
+    }
     puts("<hr>");
 }
 

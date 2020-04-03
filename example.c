@@ -64,7 +64,8 @@ color get_color(void)
 
 //! @macro KM
 //!     Convert meters into kilometers.
-#define KM(meters) (meters * M_PER_KM)
+#define KM(meters) \
+    (meters * M_PER_KM)
 
 //! @macro NUM_FOOBAR
 //!     256 is a computer-ish number, right?
