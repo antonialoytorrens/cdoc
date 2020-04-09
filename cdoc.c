@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "0.0"
+#define VERSION "0.1"
 
 static void
 usage(void);
