@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -103,7 +102,11 @@ version(void)
 static void
 errorf(char const* fmt, ...)
 {
-    assert(fmt != NULL);
+    if (fmt == NULL)
+    {
+        fputs("error: errorf called with NULL format string\n", stderr);
+        goto terminate;
+    }
 
     va_list args;
     va_start(args, fmt);
@@ -112,6 +115,7 @@ errorf(char const* fmt, ...)
     fputs("\n", stderr);
     va_end(args);
 
+terminate:
     // Any error should immediately terminate the program.
     exit(EXIT_FAILURE);
 }
@@ -187,10 +191,9 @@ static char const*
 doc_content_start(char const* cp)
 {
     while (is_hspace(*cp)) cp += 1; // Whitespace before '//!'
-    assert(cp[0] == '/');
-    assert(cp[1] == '/');
-    assert(cp[2] == '!');
-    cp += 3; // The '//!'
+    if (cp[0] != '/' || cp[1] != '/' || cp[2] != '!')
+        errorf("[%s] Received non-doc-line", __func__);
+    cp += 3; // Length of "//!"
     while (is_hspace(*cp)) cp += 1; // Whitespace after '//!'
     return cp;
 }
