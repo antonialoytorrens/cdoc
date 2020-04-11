@@ -334,7 +334,22 @@ parse_doc(char* const* lines_begin, char*** linepp)
 #define DOC_IS(tag) (len == strlen(tag) && strncmp(start, tag, len) == 0)
     if (DOC_IS("struct") || DOC_IS("union") || DOC_IS("enum")
         || DOC_IS("typedef") || DOC_IS("variable"))
+    {
         d.source = parse_struct_source(linepp);
+        char** start = d.source;
+        char*** cur = &start;
+        while (**cur)
+        {
+            if (!is_doc_line(**cur))
+            {
+                *cur += 1;
+                continue;
+            }
+            d.sections =
+                xalloc(d.sections, (d.section_count + 1) * sizeof(*d.sections));
+            d.sections[d.section_count++] = parse_section(lines_begin, cur);
+        }
+    }
     else if (DOC_IS("function"))
         d.source = parse_function_source(linepp);
     else if (DOC_IS("macro"))

@@ -19,10 +19,19 @@
 void swap(void* p1, void* p2, size_t size);
 
 //! @struct string
-//!     POD type representing an array-of-char with a known size.
+//!     POD type representing a byte-array with a known size.
 struct string
 {
+    //! @member data
+    //!     Underlying byte buffer for this string.
+    //! @note
+    //!     Although the type of data is char* there are no guarantees about the
+    //!     encoding of the buffer. Do <strong>NOT</strong> assume that data
+    //!     points to an ASCII byte string.
     char* data;
+
+    //! @member size
+    //!     Length of data in bytes.
     size_t size;
 };
 
