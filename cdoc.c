@@ -16,9 +16,7 @@ version(void);
 static void
 do_file(FILE* fp);
 
-char** lines; // NULL-terminated list of all lines in the file.
-char** linep; // Pointer to the current line.
-#define LINENO ((int)(linep - lines + 1))
+#define LINENO(/* char** */ start, /* char** */ cur) ((int)(cur - start + 1))
 
 struct doc
 {
@@ -29,7 +27,7 @@ struct doc
     char** source; // dynamically allocated
 };
 static struct doc
-parse_doc(void);
+parse_doc(char* const* lines_begin, char*** linepp);
 static void
 print_doc(struct doc const d);
 
@@ -45,7 +43,7 @@ struct section
     int text_len;
 };
 static struct section
-parse_section(void);
+parse_section(char* const* lines_begin, char*** linepp);
 static void
 print_section(struct section const s);
 
@@ -201,8 +199,8 @@ static void
 do_file(FILE* fp)
 {
     char* const text = read_text_file(fp);
-    lines = text_to_lines(text);
-    linep = lines;
+    char** const lines = text_to_lines(text);
+    char** linep = lines; // current line
 
     // PARSE
     struct doc* docs = NULL;
@@ -215,7 +213,7 @@ do_file(FILE* fp)
             continue;
         }
         docs = xalloc(docs, (doc_count + 1) * sizeof(*docs));
-        docs[doc_count++] = parse_doc();
+        docs[doc_count++] = parse_doc(lines, &linep);
     }
 
     // PRINT
@@ -236,20 +234,20 @@ do_file(FILE* fp)
 }
 
 static char**
-parse_struct_source(void)
+parse_struct_source(char*** linepp)
 {
     char** lines = NULL;
     size_t count = 0;
 
     bool parsed = false; // Are we finished parsing the source?
     int brackets = 0; // Number of '{' minus number of '}'.
-    for (; !parsed; linep += 1)
+    for (; !parsed; *linepp += 1)
     {
-        if (linep == NULL) errorf("Unexpected end-of-file");
+        if (*linepp == NULL) errorf("Unexpected end-of-file");
         lines = xalloc(lines, (count + 1) * sizeof(char*));
-        lines[count++] = *linep;
+        lines[count++] = **linepp;
 
-        for (char* cp = *linep; *cp != '\0'; ++cp)
+        for (char* cp = **linepp; *cp != '\0'; ++cp)
         {
             brackets += *cp == '{';
             brackets -= *cp == '}';
@@ -263,19 +261,19 @@ parse_struct_source(void)
 }
 
 static char**
-parse_function_source(void)
+parse_function_source(char*** linepp)
 {
     char** lines = NULL;
     size_t count = 0;
 
     bool parsed = false;
-    for (; !parsed; linep += 1)
+    for (; !parsed; *linepp += 1)
     {
-        if (linep == NULL) errorf("Unexpected end-of-file");
+        if (*linepp == NULL) errorf("Unexpected end-of-file");
         lines = xalloc(lines, (count + 1) * sizeof(char*));
-        lines[count++] = *linep;
+        lines[count++] = **linepp;
 
-        for (char* cp = *linep; *cp != '\0'; ++cp)
+        for (char* cp = **linepp; *cp != '\0'; ++cp)
         {
             if (*cp == ';')
             {
@@ -298,18 +296,18 @@ parse_function_source(void)
 }
 
 static char**
-parse_macro_source(void)
+parse_macro_source(char*** linepp)
 {
     char** lines = NULL;
     size_t count = 0;
 
     bool parsed = false;
-    for (; !parsed; linep += 1)
+    for (; !parsed; *linepp += 1)
     {
-        if (linep == NULL) errorf("Unexpected end-of-file");
+        if (*linepp == NULL) errorf("Unexpected end-of-file");
         lines = xalloc(lines, (count + 1) * sizeof(char*));
-        lines[count++] = *linep;
-        parsed = (*linep)[strlen(*linep) - 1] != '\\';
+        lines[count++] = **linepp;
+        parsed = (**linepp)[strlen(**linepp) - 1] != '\\';
     }
 
     lines = xalloc(lines, (count + 1) * sizeof(char*));
@@ -318,14 +316,14 @@ parse_macro_source(void)
 }
 
 static struct doc
-parse_doc(void)
+parse_doc(char* const* lines_begin, char*** linepp)
 {
     struct doc d = {0};
-    while (is_doc_line(*linep))
+    while (is_doc_line(**linepp))
     {
         d.sections =
             xalloc(d.sections, (d.section_count + 1) * sizeof(*d.sections));
-        d.sections[d.section_count++] = parse_section();
+        d.sections[d.section_count++] = parse_section(lines_begin, linepp);
     }
 
     char const* const start = d.sections[0].tag_start;
@@ -333,11 +331,11 @@ parse_doc(void)
 #define DOC_IS(tag) (len == strlen(tag) && strncmp(start, tag, len) == 0)
     if (DOC_IS("struct") || DOC_IS("union") || DOC_IS("enum")
         || DOC_IS("typedef") || DOC_IS("variable"))
-        d.source = parse_struct_source();
+        d.source = parse_struct_source(linepp);
     else if (DOC_IS("function"))
-        d.source = parse_function_source();
+        d.source = parse_function_source(linepp);
     else if (DOC_IS("macro"))
-        d.source = parse_macro_source();
+        d.source = parse_macro_source(linepp);
 #undef DOC_IS
 
     return d;
@@ -358,14 +356,16 @@ print_doc(struct doc const d)
 }
 
 static struct section
-parse_section(void)
+parse_section(char* const* lines_begin, char*** linepp)
 {
     struct section s = {0};
-    char const* cp = doc_content_start(*linep);
+    char const* cp = doc_content_start(**linepp);
     if (*cp++ != '@')
-        errorf("[line %d] Doc-section must begin with @<TAG>", LINENO);
+        errorf(
+            "[line %d] Doc-section must begin with @<TAG>",
+            LINENO(lines_begin, *linepp));
     if (is_hspace(*cp) || *cp == '\0')
-        errorf("[line %d] Empty doc-comment tag", LINENO);
+        errorf("[line %d] Empty doc-comment tag", LINENO(lines_begin, *linepp));
 
     // TAG
     s.tag_start = cp;
@@ -381,13 +381,16 @@ parse_section(void)
 
     while (is_hspace(*cp)) cp += 1;
     if (*cp != '\0')
-        errorf("[line %d] Extra character(s) after tag line <NAME>", LINENO);
+        errorf(
+            "[line %d] Extra character(s) after tag line <NAME>",
+            LINENO(lines_begin, *linepp));
 
     // TEXT
-    linep += 1;
-    s.text_start = linep;
-    while (is_doc_line(*linep) && *doc_content_start(*linep) != '@') linep += 1;
-    s.text_len = (int)(linep - s.text_start);
+    *linepp += 1;
+    s.text_start = *linepp;
+    while (is_doc_line(**linepp) && *doc_content_start(**linepp) != '@')
+        *linepp += 1;
+    s.text_len = (int)(*linepp - s.text_start);
 
     return s;
 }
