@@ -14,9 +14,8 @@ static void
 version(void);
 
 static void
-do_file(void);
+do_file(FILE* fp);
 
-static FILE* fp = NULL;
 char** lines; // NULL-terminated list of all lines in the file.
 char** linep; // Pointer to the current line.
 #define LINENO ((int)(linep - lines + 1))
@@ -65,14 +64,14 @@ main(int argc, char** argv)
             continue;
         }
 
-        fp = (strcmp(arg, "-") == 0 && !parse_options) ? stdin
-                                                       : fopen(arg, "rb");
+        bool const use_stdin = strcmp(arg, "-") == 0 && !parse_options;
+        FILE* const fp = use_stdin ? stdin : fopen(arg, "rb");
         if (fp == NULL)
         {
             perror(arg);
             exit(EXIT_FAILURE);
         }
-        do_file();
+        do_file(fp);
         fclose(fp);
     }
 
@@ -199,7 +198,7 @@ doc_content_start(char const* cp)
 }
 
 static void
-do_file(void)
+do_file(FILE* fp)
 {
     char* const text = read_text_file(fp);
     lines = text_to_lines(text);
