@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 //! @function usage
 //!     Print usage information and exit.
