@@ -49,5 +49,13 @@ The `cdoc` application can be build using a POSIX c99 compiler:
 
 ```sh
 $ make cdoc
+$ ./cdoc --help
+Usage: cdoc [OPTION]... [--] [FILE]...
+
+With no FILE, or when FILE is -, read standard input.
+
+Options:
+  --help      Display usage information and exit.
+  --version   Display version information and exit.
 ```
 
