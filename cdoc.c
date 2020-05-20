@@ -203,21 +203,20 @@ int
 main(int argc, char** argv)
 {
     bool parse_options = true;
-    for (int i = 1; i < argc; ++i)
-    {
+    for (int i = 1; i < argc; ++i) {
         char const* const arg = argv[i];
-        if (parse_options && strcmp(arg, "--help") == 0) usage();
-        if (parse_options && strcmp(arg, "--version") == 0) version();
-        if (parse_options && strcmp(arg, "--") == 0)
-        {
+        if (parse_options && strcmp(arg, "--help") == 0)
+            usage();
+        if (parse_options && strcmp(arg, "--version") == 0)
+            version();
+        if (parse_options && strcmp(arg, "--") == 0) {
             parse_options = false;
             continue;
         }
 
         bool const use_stdin = strcmp(arg, "-") == 0 && !parse_options;
         FILE* const fp = use_stdin ? stdin : fopen(arg, "rb");
-        if (fp == NULL)
-        {
+        if (fp == NULL) {
             perror(arg);
             exit(EXIT_FAILURE);
         }
@@ -255,8 +254,7 @@ version(void)
 static void
 errorf(char const* fmt, ...)
 {
-    if (fmt == NULL)
-    {
+    if (fmt == NULL) {
         fputs("error: errorf called with NULL format string\n", stderr);
         goto terminate;
     }
@@ -276,8 +274,10 @@ terminate:
 static void*
 xalloc(void* ptr, size_t size)
 {
-    if (size == 0) return free(ptr), NULL;
-    if ((ptr = realloc(ptr, size)) == NULL) errorf("Out of memory");
+    if (size == 0)
+        return free(ptr), NULL;
+    if ((ptr = realloc(ptr, size)) == NULL)
+        errorf("Out of memory");
     return ptr;
 }
 
@@ -288,13 +288,14 @@ read_text_file(FILE* stream)
     size_t len = 0;
 
     int c;
-    while ((c = fgetc(stream)) != EOF)
-    {
-        if (c == '\0') errorf("Encountered illegal NUL byte");
+    while ((c = fgetc(stream)) != EOF) {
+        if (c == '\0')
+            errorf("Encountered illegal NUL byte");
         buf = xalloc(buf, len + 1);
         buf[len++] = (char)c;
     }
-    if (!feof(stream)) errorf("Failed to read entire text file");
+    if (!feof(stream))
+        errorf("Failed to read entire text file");
 
     buf = xalloc(buf, len + 1);
     buf[len++] = '\0';
@@ -308,9 +309,9 @@ text_to_lines(char* text)
     size_t count = 0;
     lines[count++] = text;
 
-    for (; *text; ++text)
-    {
-        if (*text != '\n') continue;
+    for (; *text; ++text) {
+        if (*text != '\n')
+            continue;
         *text = '\0';
         lines[count++] = text + 1;
     }
@@ -328,22 +329,29 @@ is_hspace(int c)
 static bool
 is_doc_line(char const* line)
 {
-    if (line == NULL) return false;
-    while (is_hspace(*line)) line += 1;
-    if (*line++ != '/') return false;
-    if (*line++ != '/') return false;
-    if (*line++ != '!') return false;
+    if (line == NULL)
+        return false;
+    while (is_hspace(*line))
+        line += 1;
+    if (*line++ != '/')
+        return false;
+    if (*line++ != '/')
+        return false;
+    if (*line++ != '!')
+        return false;
     return true;
 }
 
 static char const*
 doc_content_start(char const* cp)
 {
-    while (is_hspace(*cp)) cp += 1; // Whitespace before '//!'
+    while (is_hspace(*cp))
+        cp += 1; // Whitespace before '//!'
     if (cp[0] != '/' || cp[1] != '/' || cp[2] != '!')
         errorf("[%s] Received non-doc-line", __func__);
     cp += 3; // Length of "//!"
-    while (is_hspace(*cp)) cp += 1; // Whitespace after '//!'
+    while (is_hspace(*cp))
+        cp += 1; // Whitespace after '//!'
     return cp;
 }
 
@@ -357,10 +365,8 @@ do_file(FILE* fp)
     // PARSE
     struct doc* docs = NULL;
     size_t doc_count = 0;
-    while (*linep != NULL)
-    {
-        if (!is_doc_line(*linep))
-        {
+    while (*linep != NULL) {
+        if (!is_doc_line(*linep)) {
             linep += 1;
             continue;
         }
@@ -369,14 +375,12 @@ do_file(FILE* fp)
     }
 
     // PRINT
-    for (size_t i = 0; i < doc_count; ++i)
-    {
+    for (size_t i = 0; i < doc_count; ++i) {
         print_doc(docs[i]);
     }
 
     // CLEANUP
-    for (size_t i = 0; i < doc_count; ++i)
-    {
+    for (size_t i = 0; i < doc_count; ++i) {
         free(docs[i].sections);
         free(docs[i].source);
     }
@@ -393,17 +397,17 @@ parse_struct_source(char*** linepp)
 
     bool parsed = false; // Are we finished parsing the source?
     int brackets = 0; // Number of '{' minus number of '}'.
-    for (; !parsed; *linepp += 1)
-    {
-        if (*linepp == NULL) errorf("Unexpected end-of-file");
+    for (; !parsed; *linepp += 1) {
+        if (*linepp == NULL)
+            errorf("Unexpected end-of-file");
         lines = xalloc(lines, (count + 1) * sizeof(char*));
         lines[count++] = **linepp;
 
-        for (char* cp = **linepp; *cp != '\0'; ++cp)
-        {
+        for (char* cp = **linepp; *cp != '\0'; ++cp) {
             brackets += *cp == '{';
             brackets -= *cp == '}';
-            if (brackets == 0 && *cp == ';') parsed = true;
+            if (brackets == 0 && *cp == ';')
+                parsed = true;
         }
     }
 
@@ -419,26 +423,24 @@ parse_function_source(char*** linepp)
     size_t count = 0;
 
     bool parsed = false;
-    for (; !parsed; *linepp += 1)
-    {
-        if (*linepp == NULL) errorf("Unexpected end-of-file");
+    for (; !parsed; *linepp += 1) {
+        if (*linepp == NULL)
+            errorf("Unexpected end-of-file");
         lines = xalloc(lines, (count + 1) * sizeof(char*));
         lines[count++] = **linepp;
 
-        for (char* cp = **linepp; *cp != '\0'; ++cp)
-        {
-            if (*cp == ';')
-            {
+        for (char* cp = **linepp; *cp != '\0'; ++cp) {
+            if (*cp == ';') {
                 parsed = true;
                 break;
             }
-            else if (*cp == '{')
-            {
+            else if (*cp == '{') {
                 parsed = true;
                 lines = xalloc(lines, (count + 1) * sizeof(char*));
                 lines[count++] = "/* function definition... */";
             }
-            if (*cp == '{' || *cp == ';') parsed = true;
+            if (*cp == '{' || *cp == ';')
+                parsed = true;
         }
     }
 
@@ -454,9 +456,9 @@ parse_macro_source(char*** linepp)
     size_t count = 0;
 
     bool parsed = false;
-    for (; !parsed; *linepp += 1)
-    {
-        if (*linepp == NULL) errorf("Unexpected end-of-file");
+    for (; !parsed; *linepp += 1) {
+        if (*linepp == NULL)
+            errorf("Unexpected end-of-file");
         lines = xalloc(lines, (count + 1) * sizeof(char*));
         lines[count++] = **linepp;
         parsed = (**linepp)[strlen(**linepp) - 1] != '\\';
@@ -471,8 +473,7 @@ static struct doc
 parse_doc(char* const* lines_begin, char*** linepp)
 {
     struct doc d = {0};
-    while (is_doc_line(**linepp))
-    {
+    while (is_doc_line(**linepp)) {
         d.sections =
             xalloc(d.sections, (d.section_count + 1) * sizeof(*d.sections));
         d.sections[d.section_count++] = parse_section(lines_begin, linepp);
@@ -482,15 +483,12 @@ parse_doc(char* const* lines_begin, char*** linepp)
     size_t const len = (size_t)d.sections[0].tag_len;
 #define DOC_IS(tag) (len == strlen(tag) && strncmp(start, tag, len) == 0)
     if (DOC_IS("struct") || DOC_IS("union") || DOC_IS("enum")
-        || DOC_IS("typedef") || DOC_IS("variable"))
-    {
+        || DOC_IS("typedef") || DOC_IS("variable")) {
         d.source = parse_struct_source(linepp);
         char** start = d.source;
         char*** cur = &start;
-        while (**cur)
-        {
-            if (!is_doc_line(**cur))
-            {
+        while (**cur) {
+            if (!is_doc_line(**cur)) {
                 *cur += 1;
                 continue;
             }
@@ -511,12 +509,13 @@ parse_doc(char* const* lines_begin, char*** linepp)
 static void
 print_doc(struct doc const d)
 {
-    for (size_t i = 0; i < d.section_count; ++i) print_section(d.sections[i]);
-    if (d.source != NULL)
-    {
+    for (size_t i = 0; i < d.section_count; ++i)
+        print_section(d.sections[i]);
+    if (d.source != NULL) {
         puts("<pre><code>");
         char** ln = d.source;
-        while (*ln != NULL) puts(*ln++);
+        while (*ln != NULL)
+            puts(*ln++);
         puts("</code></pre>");
     }
     puts("<hr>");
@@ -536,17 +535,21 @@ parse_section(char* const* lines_begin, char*** linepp)
 
     // TAG
     s.tag_start = cp;
-    while (!is_hspace(*cp) && (*cp != '\0')) cp += 1;
+    while (!is_hspace(*cp) && (*cp != '\0'))
+        cp += 1;
     s.tag_len = (int)(cp - s.tag_start);
 
-    while (is_hspace(*cp)) cp += 1;
+    while (is_hspace(*cp))
+        cp += 1;
 
     // NAME
     s.name_start = cp;
-    while (!is_hspace(*cp) && (*cp != '\0')) cp += 1;
+    while (!is_hspace(*cp) && (*cp != '\0'))
+        cp += 1;
     s.name_len = (int)(cp - s.name_start);
 
-    while (is_hspace(*cp)) cp += 1;
+    while (is_hspace(*cp))
+        cp += 1;
     if (*cp != '\0')
         errorf(
             "[line %d] Extra character(s) after tag line <NAME>",
@@ -571,8 +574,7 @@ print_section(struct section const s)
         s.tag_start,
         s.name_len,
         s.name_start);
-    for (int i = 0; i < s.text_len; ++i)
-    {
+    for (int i = 0; i < s.text_len; ++i) {
         char const* const start = doc_content_start(s.text_start[i]);
         puts(start);
     }
