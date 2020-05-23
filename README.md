@@ -45,7 +45,7 @@ clear_buffer(struct buffer* buf)
 
 ## Building
 
-The `cdoc` application can be build using a POSIX c99 compiler:
+The `cdoc` application can be built using a POSIX c99 compiler:
 
 ```sh
 $ make cdoc
@@ -58,4 +58,3 @@ Options:
   --help      Display usage information and exit.
   --version   Display version information and exit.
 ```
-
