@@ -277,10 +277,11 @@ static void*
 xalloc(void* ptr, size_t size)
 {
     if (size == 0) {
-        return free(ptr), NULL;
+        free(ptr);
+        return NULL;
     }
     if ((ptr = realloc(ptr, size)) == NULL) {
-        errorf("Out of memory");
+        errorf("[%s] Out of memory", __func__);
     }
     return ptr;
 }
