@@ -538,8 +538,10 @@ print_doc(struct doc const d)
     if (d.source != NULL) {
         puts("<pre><code>");
         char** ln = d.source;
-        while (*ln != NULL) {
-            puts(*ln++);
+        for (; *ln != NULL; ++ln) {
+            if (!is_doc_line(*ln)) {
+                puts(*ln);
+            }
         }
         puts("</code></pre>");
     }

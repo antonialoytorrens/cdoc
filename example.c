@@ -29,7 +29,6 @@ struct string
     //!     encoding of the buffer. Do <strong>NOT</strong> assume that data
     //!     points to an ASCII byte string.
     char* data;
-
     //! @member size
     //!     Length of data in bytes.
     size_t size;
