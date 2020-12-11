@@ -18,7 +18,7 @@ An example of `cdoc` documentation is as follows:
 
 //! @struct buffer
 //!     A buffer for holding some data.
-//!     This is just an example so don't read into it too much.
+//!     This is just an example so don't think about it too hard.
 struct buffer
 {
     //! @member data
@@ -30,7 +30,7 @@ struct buffer
 };
 
 //! @function clear_buffer
-//!     Zero out the contents of this buffer and set's
+//!     Zero out the contents of this buffer and set its length to zero.
 //! @return
 //!     The previous length of the buffer.
 static inline uint8_t
