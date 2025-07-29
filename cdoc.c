@@ -11,6 +11,8 @@
 
 #define VERSION "0.3a"
 
+static bool markdown_output = false;
+
 /*!
  * @function usage
  * Print usage information and exit.
@@ -264,6 +266,10 @@ main(int argc, char** argv)
         if (parse_options && strcmp(arg, "--version") == 0) {
             version();
         }
+        if (parse_options && strcmp(arg, "--md") == 0) {
+            markdown_output = true;
+            continue;
+        }
         if (parse_options && strcmp(arg, "--") == 0) {
             parse_options = false;
             continue;
@@ -294,6 +300,7 @@ usage(void)
         "Options:"                                              "\n"
         "  --help      Display usage information and exit."     "\n"
         "  --version   Display version information and exit."   "\n"
+        "  --md        Output in Markdown format."              "\n"
     );
     // clang-format on
     exit(EXIT_SUCCESS);
@@ -631,15 +638,27 @@ print_doc(struct doc const d)
         print_section(d.sections[i]);
     }
     if (d.source != NULL) {
-        puts("<pre><code>");
+        if (markdown_output) {
+            puts("```c");
+        } else {
+            puts("<pre><code>");
+        }
         for (char** ln = d.source; *ln != NULL; ++ln) {
             if (!is_doc_comment(*ln)) {
                 puts(*ln);
             }
         }
-        puts("</code></pre>");
+        if (markdown_output) {
+            puts("```");
+        } else {
+            puts("</code></pre>");
+        }
     }
-    puts("<hr>");
+    if (markdown_output) {
+        puts("\n---");
+    } else {
+        puts("<hr>");
+    }
 }
 
 static struct section
@@ -700,12 +719,21 @@ parse_section(char* const* lines_begin, char* line, char*** text_body_p)
 static void
 print_section(struct section const s)
 {
-    printf(
-        "<h3>%.*s: %.*s</h3>\n",
-        s.tag_len,
-        s.tag_start,
-        s.name_len,
-        s.name_start);
+    if (markdown_output) {
+        printf(
+            "### %.*s: %.*s\n",
+            s.tag_len,
+            s.tag_start,
+            s.name_len,
+            s.name_start);
+    } else {
+        printf(
+            "<h3>%.*s: %.*s</h3>\n",
+            s.tag_len,
+            s.tag_start,
+            s.name_len,
+            s.name_start);
+    }
     for (int i = 0; i < s.text_len; ++i) {
         puts(clean_doc_line(s.text_start[i]));
     }
