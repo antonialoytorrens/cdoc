@@ -3,8 +3,14 @@
 .PHONY: format clean
 
 CC = c99
-CFLAGS = -O0 -g
+BUILD_TYPE = debug
 OBJS = cdoc.o
+
+ifeq ($(BUILD_TYPE),release)
+	CFLAGS = -O2 -Wall -Wextra -std=c99
+else ifeq ($(BUILD_TYPE),debug)
+	CFLAGS = -g -O0 -Wall -Werror -Wextra -std=c99
+endif
 
 cdoc: $(OBJS)
 	$(CC) -o $@ $(OBJS) $(CFLAGS)
